@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# Models (trained artifacts can be regenerated)
+models/*.pkl
+
+# Data (keep sample, ignore large/raw dumps)
+# data/german_credit_data.csv  # keep the sample dataset committed
+
+# Evaluation outputs
+reports/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/

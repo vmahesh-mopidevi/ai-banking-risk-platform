@@ -1,0 +1,24 @@
+# docker-compose.yml
+# Convenience wrapper so the whole service starts with a single command:
+#     docker compose up --build
+#
+# Exposes the FastAPI app on http://localhost:8000
+
+services:
+  api:
+    build: .
+    container_name: ai-banking-risk-api
+    ports:
+      - "8000:8000"
+    environment:
+      # Where the API looks for the trained model inside the container.
+      MODEL_PATH: /app/models/credit_risk_model.pkl
+    volumes:
+      # Persist MLflow runs on the host so experiment history survives restarts.
+      - ./mlruns:/app/mlruns
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped

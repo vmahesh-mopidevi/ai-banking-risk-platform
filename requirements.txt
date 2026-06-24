@@ -1,0 +1,18 @@
+# ---- Core data & ML ----
+pandas
+numpy
+scikit-learn
+xgboost            # Preferred model; training falls back to RandomForest if unavailable
+joblib             # Save / load the trained model artifact
+
+# ---- Experiment tracking ----
+mlflow
+
+# ---- API layer ----
+fastapi
+uvicorn[standard]  # ASGI server that runs the FastAPI app
+pydantic
+
+# ---- Testing ----
+pytest
+httpx              # Required by FastAPI's TestClient for the API tests
