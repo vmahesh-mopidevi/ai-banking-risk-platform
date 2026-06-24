@@ -84,6 +84,9 @@ credit risk, returning a calibrated risk score and a simple risk band
   CSV is present.
 - ✅ **MLflow experiment tracking** — logs parameters, metrics
   (accuracy, precision, recall, F1, ROC AUC), and the model artifact.
+- ✅ **MLflow Model Registry** — registers each trained model, auto-promotes to
+  **Production**, and the API loads the Production version (falls back to local
+  `.pkl` if needed).
 - ✅ **FastAPI service** with `/health`, `/model-info`, and `/predict`.
 - ✅ **Automatic input validation** via Pydantic (categories + value ranges).
 - ✅ **Dockerised** for one-command startup.
@@ -99,8 +102,10 @@ ai-banking-risk-platform/
 │   └── german_credit_data.csv      # auto-generated if missing
 ├── src/
 │   ├── data_preprocessing.py       # load, clean, encode, split
-│   ├── train_model.py              # train + MLflow tracking + save model
+│   ├── train_model.py              # train + MLflow tracking + registry
 │   ├── evaluate_model.py           # classification report + saved summary
+│   ├── model_registry.py           # register, promote, load Production model
+│   ├── promote_model.py            # CLI to move a version to Staging/Production
 │   └── utils.py                    # paths, schema, synthetic data generator
 ├── api/
 │   ├── main.py                     # FastAPI app + endpoints
@@ -132,7 +137,8 @@ pip install -r requirements.txt
 
 ### 2. Train the model
 
-This generates the dataset (if missing), trains the model, logs to MLflow, and
+This generates the dataset (if missing), trains the model, logs to MLflow,
+registers the model as `credit_risk_model`, promotes it to **Production**, and
 saves `models/credit_risk_model.pkl`.
 
 ```bash
@@ -150,6 +156,18 @@ python -m src.evaluate_model
 ```bash
 mlflow ui --backend-store-uri ./mlruns
 # open http://localhost:5000
+```
+
+Click **Models** in the top bar to see registered versions and their stages
+(None → Staging → Production).
+
+### 4b. (Optional) Manually promote a model version
+
+Training auto-promotes the latest run to Production. To promote a specific
+version yourself (e.g. after comparing runs in the UI):
+
+```bash
+python -m src.promote_model --version 2 --alias Production
 ```
 
 ### 5. Start the API
@@ -227,8 +245,8 @@ production-grade, governed AI system:
    rates, and prediction distribution dashboards with alerting.
 5. **Evidently AI drift detection** — scheduled data-drift and target-drift
    reports comparing live traffic to the training distribution.
-6. **MLflow Model Registry** — promote models through Staging → Production
-   stages; the API loads the current Production model instead of a local file.
+6. ~~**MLflow Model Registry**~~ ✅ — API loads the Production model from the
+   registry (with local `.pkl` fallback).
 7. **Automated retraining** — triggered by drift alerts or on a schedule
    (Airflow / cron), with automatic evaluation gates before promotion.
 8. **Model governance & audit logs** — full lineage (data version, code version,

@@ -83,3 +83,12 @@ class ModelInfoResponse(BaseModel):
     project: str
     trained_at: Optional[str] = None
     metrics: Optional[dict] = None
+    model_source: Optional[str] = Field(
+        None, description="Where the API loaded the model from: 'registry' or 'file'"
+    )
+    registry_version: Optional[str] = Field(
+        None, description="MLflow Model Registry version number (when loaded from registry)"
+    )
+    registry_stage: Optional[str] = Field(
+        None, description="MLflow alias, e.g. Production (when loaded from registry)"
+    )

@@ -35,6 +35,7 @@ from sklearn.metrics import (
 )
 
 from src.data_preprocessing import preprocess_data
+from src.model_registry import REGISTERED_MODEL_NAME, register_and_promote
 from src.utils import MLRUNS_DIR, MODEL_PATH, ensure_dirs
 
 # XGBoost is preferred, but it is an optional dependency. If it cannot be
@@ -113,26 +114,41 @@ def train() -> dict:
         mlflow.log_param("n_features", len(feature_names))
         mlflow.log_metrics(metrics)
         if model_type == "XGBoostClassifier":
-            mlflow.xgboost.log_model(model, artifact_path="model")
+            mlflow.xgboost.log_model(
+                model,
+                artifact_path="model",
+                registered_model_name=REGISTERED_MODEL_NAME,
+            )
         else:
-            mlflow.sklearn.log_model(model, artifact_path="model")
+            mlflow.sklearn.log_model(
+                model,
+                artifact_path="model",
+                registered_model_name=REGISTERED_MODEL_NAME,
+            )
+
+        trained_at = datetime.now(timezone.utc).isoformat()
+        bundle = {
+            "model": model,
+            "model_type": model_type,
+            "feature_names": feature_names,
+            "metrics": metrics,
+            "trained_at": trained_at,
+            "version": "0.1.0",
+        }
+        joblib.dump(bundle, MODEL_PATH)
+        mlflow.log_artifact(str(MODEL_PATH), artifact_path="api_bundle")
+
+        register_and_promote(
+            model_type=model_type,
+            metrics=metrics,
+            trained_at=trained_at,
+            version_label=bundle["version"],
+        )
 
         print("[train] Metrics:")
         for name, value in metrics.items():
             print(f"         {name:10s}: {value:.4f}")
 
-    # --- Save a self-contained bundle for the API ----------------------------
-    # Bundling the feature order + metadata with the model means the API never
-    # has to guess column order or re-derive anything.
-    bundle = {
-        "model": model,
-        "model_type": model_type,
-        "feature_names": feature_names,
-        "metrics": metrics,
-        "trained_at": datetime.now(timezone.utc).isoformat(),
-        "version": "0.1.0",
-    }
-    joblib.dump(bundle, MODEL_PATH)
     print(f"[train] Saved model bundle to {MODEL_PATH}")
 
     return metrics

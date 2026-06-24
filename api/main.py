@@ -19,7 +19,6 @@ import os
 import sys
 from pathlib import Path
 
-import joblib
 from fastapi import FastAPI, HTTPException
 
 # Make sure the project root is importable when launched from anywhere
@@ -35,6 +34,7 @@ from api.schemas import (  # noqa: E402
     PredictionResponse,
 )
 from src.data_preprocessing import TARGET_MAP_INVERSE, encode_record  # noqa: E402
+from src.model_registry import DEFAULT_MODEL_ALIAS, REGISTERED_MODEL_NAME, load_model_bundle  # noqa: E402
 from src.utils import MODEL_PATH  # noqa: E402
 
 PROJECT_DESCRIPTION = (
@@ -58,12 +58,22 @@ MODEL_BUNDLE: dict | None = None
 def load_model() -> None:
     global MODEL_BUNDLE
     model_path = Path(os.getenv("MODEL_PATH", MODEL_PATH))
-    if model_path.exists():
-        MODEL_BUNDLE = joblib.load(model_path)
-        print(f"[api] Loaded model from {model_path}")
-    else:
-        MODEL_BUNDLE = None
-        print(f"[api] WARNING: no model found at {model_path}. Train it first.")
+    source = os.getenv("MODEL_SOURCE", "auto").lower()
+    model_name = os.getenv("MLFLOW_MODEL_NAME", REGISTERED_MODEL_NAME)
+    alias = os.getenv("MLFLOW_MODEL_ALIAS", os.getenv("MLFLOW_MODEL_STAGE", DEFAULT_MODEL_ALIAS))
+
+    if source not in {"auto", "registry", "file"}:
+        print(f"[api] WARNING: unknown MODEL_SOURCE '{source}', using 'auto'")
+        source = "auto"
+
+    MODEL_BUNDLE = load_model_bundle(
+        source=source,  # type: ignore[arg-type]
+        model_path=model_path,
+        model_name=model_name,
+        alias=alias,
+    )
+    if MODEL_BUNDLE is None:
+        print("[api] WARNING: no model loaded. Train with `python -m src.train_model` first.")
 
 
 load_model()
@@ -90,13 +100,16 @@ def model_info() -> ModelInfoResponse:
     if MODEL_BUNDLE is None:
         raise HTTPException(status_code=503, detail="Model not loaded. Train it first.")
     return ModelInfoResponse(
-        model_name="credit_risk_model",
+        model_name=REGISTERED_MODEL_NAME,
         model_type=MODEL_BUNDLE.get("model_type", "unknown"),
         version=MODEL_BUNDLE.get("version", "0.1.0"),
         purpose="Predict whether a loan applicant is a good or bad credit risk.",
         project=PROJECT_DESCRIPTION,
         trained_at=MODEL_BUNDLE.get("trained_at"),
         metrics=MODEL_BUNDLE.get("metrics"),
+        model_source=MODEL_BUNDLE.get("model_source"),
+        registry_version=MODEL_BUNDLE.get("registry_version"),
+        registry_stage=MODEL_BUNDLE.get("registry_alias"),
     )
 
 

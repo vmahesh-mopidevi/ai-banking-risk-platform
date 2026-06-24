@@ -11,7 +11,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # Where the API looks for the trained model inside the container.
+      MLFLOW_TRACKING_URI: file:///app/mlruns
+      MLFLOW_MODEL_NAME: credit_risk_model
+      MLFLOW_MODEL_ALIAS: Production
+      MODEL_SOURCE: auto
       MODEL_PATH: /app/models/credit_risk_model.pkl
     volumes:
       # Persist MLflow runs on the host so experiment history survives restarts.
